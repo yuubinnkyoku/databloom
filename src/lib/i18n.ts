@@ -40,7 +40,7 @@ export const translations = {
         savedDryReference: '乾燥参照値を保存しました',
         savedWetReference: '湿潤参照値を保存しました',
         calibrationCleared: '調整をクリアしました。',
-        simulatorRunning: 'シミュレータ実行中（2~5 Hz）',
+        simulatorRunning: 'シミュレータ実行中(2~5 Hz)',
 
         // Chart
         moisturePercent: '水分(%)',
