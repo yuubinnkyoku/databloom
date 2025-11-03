@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 
+import Link from 'next/link';
 import { BLEConnect } from '../components/BLEConnect';
 import { Controls } from '../components/Controls';
 import { LiveChart } from '../components/LiveChart';
@@ -21,6 +22,11 @@ export default function Home() {
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             {t('subtitle')}
           </p>
+          <div>
+            <Link href="/microbit" className="text-sm text-blue-600 underline dark:text-blue-400">
+              micro:bit用コードを見る
+            </Link>
+          </div>
         </header>
 
         <BLEConnect />

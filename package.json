@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "build": "bunx next build",
+    "start": "bunx next start",
     "lint": "eslint"
   },
   "dependencies": {
@@ -14,18 +14,20 @@
     "next": "16.0.1",
     "react": "19.2.0",
     "react-chartjs-2": "^5.2.0",
-    "react-dom": "19.2.0"
+    "react-dom": "19.2.0",
+    "shiki": "^1.29.2"
   },
   "devDependencies": {
-    "@types/web-bluetooth": "^0.0.20",
-    "babel-plugin-react-compiler": "1.0.0",
-    "typescript": "^5",
+    "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4",
+    "@types/web-bluetooth": "^0.0.20",
+    "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
-    "eslint-config-next": "16.0.1"
+    "eslint-config-next": "16.0.1",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "@types/bun": "latest"
   }
 }
