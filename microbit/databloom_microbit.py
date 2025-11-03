@@ -17,28 +17,19 @@ from microbit import *
 import bluetooth
 
 SEQ_MOD = 65536
-SAMPLE_INTERVAL_MS = 250  # Send samples at ~4 Hz
 
 bluetooth.start_uart_service()
 
 seq = 0
 
-def collect_and_send_data():
+def on_forever():
     global seq
-    # Read sensors
-    moisture = pin0.read_analog()                  # 0-1023
-    temp_c = temperature()                         # integer °C
-    light_val = display.read_light_level()         # 0-255
-
-    # Compose CSV line: seq,moistureRaw,tempC,lightRaw\n
+    moisture = pin0.read_analog()
+    temp_c = temperature()
+    light_val = display.read_light_level()
     line = str(seq) + "," + str(moisture) + "," + str(temp_c) + "," + str(light_val)
     bluetooth.uart_write_line(line)
-
-    # Increment sequence (wrap at 16-bit)
     seq = (seq + 1) % SEQ_MOD
+    sleep(250)
 
-    # Send ~4 Hz
-    sleep(SAMPLE_INTERVAL_MS)
-
-while True:
-    collect_and_send_data()
+basic.forever(on_forever)
