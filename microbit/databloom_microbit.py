@@ -13,6 +13,11 @@
 # - Keep output exactly CSV with a trailing newline. One sample per ~250ms (~4 Hz).
 # - Sequence wraps at 65536.
 
+from microbit import *
+import bluetooth
+import pins
+from pins import AnalogPin
+
 SEQ_MOD = 65536
 
 bluetooth.start_uart_service()
@@ -23,17 +28,18 @@ def on_forever():
     global seq
     # Read sensors
     moisture = pins.analog_read_pin(AnalogPin.P0)  # 0-1023
-    temp_c = input.temperature()                   # integer °C
-    light = input.light_level()                    # 0-255
+    temp_c = temperature()                         # integer °C
+    light_val = display.read_light_level()         # 0-255
 
     # Compose CSV line: seq,moistureRaw,tempC,lightRaw\n
-    line = "{},{},{},{}".format(seq, moisture, temp_c, light)
+    line = str(seq) + "," + str(moisture) + "," + str(temp_c) + "," + str(light_val)
     bluetooth.uart_write_line(line)
 
     # Increment sequence (wrap at 16-bit)
     seq = (seq + 1) % SEQ_MOD
 
     # Send ~4 Hz
-    basic.pause(250)
+    sleep(250)
 
-basic.forever(on_forever)
+while True:
+    on_forever()
