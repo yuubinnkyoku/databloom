@@ -9,9 +9,13 @@ export const dynamic = 'force-static';
 export default async function MicrobitCodePage() {
     const filePath = path.join(process.cwd(), 'microbit', 'databloom_microbit.py');
     const code = await fs.readFile(filePath, 'utf8');
-    const highlighted = await codeToHtml(code, {
+    const highlightedLight = await codeToHtml(code, {
         lang: 'python',
         theme: 'github-light',
+    });
+    const highlightedDark = await codeToHtml(code, {
+        lang: 'python',
+        theme: 'github-dark',
     });
 
     return (
@@ -25,7 +29,12 @@ export default async function MicrobitCodePage() {
                     <Link href="/" className="text-sm text-blue-600 underline dark:text-blue-400">戻る</Link>
                 </header>
 
-                <CodeBlock label="microbit/databloom_microbit.py" rawCode={code} codeHtml={highlighted} />
+                <CodeBlock
+                    label="microbit/databloom_microbit.py"
+                    rawCode={code}
+                    codeHtmlLight={highlightedLight}
+                    codeHtmlDark={highlightedDark}
+                />
 
                 <p className="text-sm text-zinc-600 dark:text-zinc-400">
                     手順は README の「micro:bit セットアップ（BLE/UART）」をご覧ください。

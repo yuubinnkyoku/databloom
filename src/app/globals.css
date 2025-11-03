@@ -41,3 +41,22 @@ body {
     /* dark backdrop */
   }
 }
+
+/* Show/hide dual Shiki outputs based on color scheme */
+.only-light {
+  display: block;
+}
+
+.only-dark {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  .only-light {
+    display: none;
+  }
+
+  .only-dark {
+    display: block;
+  }
+}

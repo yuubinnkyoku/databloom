@@ -2,7 +2,15 @@
 
 import { useState } from 'react';
 
-export function CodeBlock({ codeHtml, rawCode, label }: { codeHtml: string; rawCode: string; label?: string }) {
+type CodeBlockProps = {
+    rawCode: string;
+    label?: string;
+    codeHtml?: string;
+    codeHtmlLight?: string;
+    codeHtmlDark?: string;
+};
+
+export function CodeBlock({ codeHtml, codeHtmlLight, codeHtmlDark, rawCode, label }: CodeBlockProps) {
     const [copied, setCopied] = useState(false);
 
     async function handleCopy() {
@@ -52,7 +60,18 @@ export function CodeBlock({ codeHtml, rawCode, label }: { codeHtml: string; rawC
             </div>
             <div className="overflow-x-auto">
                 {/* Shiki の <pre> をそのまま描画するため、ラッパーに挿入します */}
-                <div className="p-0 text-sm leading-6" dangerouslySetInnerHTML={{ __html: codeHtml }} />
+                {codeHtmlLight || codeHtmlDark ? (
+                    <>
+                        {codeHtmlLight && (
+                            <div className="only-light p-0 text-sm leading-6" dangerouslySetInnerHTML={{ __html: codeHtmlLight }} />
+                        )}
+                        {codeHtmlDark && (
+                            <div className="only-dark p-0 text-sm leading-6" dangerouslySetInnerHTML={{ __html: codeHtmlDark }} />
+                        )}
+                    </>
+                ) : (
+                    <div className="p-0 text-sm leading-6" dangerouslySetInnerHTML={{ __html: codeHtml ?? '' }} />
+                )}
             </div>
         </div>
     );
