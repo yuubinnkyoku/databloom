@@ -5,8 +5,8 @@
 #
 # Pins / sensors:
 # - moistureRaw: AnalogPin.P0 (0-1023). Connect soil moisture sensor analog output to P0.
-# - tempC: built-in temperature sensor via input.temperature() (°C, integer)
-# - lightRaw: built-in light level via input.light_level() (0-255)
+# - tempC: built-in temperature sensor via temperature() (°C, integer)
+# - lightRaw: built-in light level via display.read_light_level() (0-255)
 #
 # Notes:
 # - The web app filters for device name starting with "BBC micro:bit" and subscribes to NUS TX.
@@ -15,8 +15,6 @@
 
 from microbit import *
 import bluetooth
-import pins
-from pins import AnalogPin
 
 SEQ_MOD = 65536
 
@@ -27,7 +25,7 @@ seq = 0
 def on_forever():
     global seq
     # Read sensors
-    moisture = pins.analog_read_pin(AnalogPin.P0)  # 0-1023
+    moisture = pin0.read_analog()                  # 0-1023
     temp_c = temperature()                         # integer °C
     light_val = display.read_light_level()         # 0-255
 
