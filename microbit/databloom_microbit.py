@@ -17,12 +17,13 @@ from microbit import *
 import bluetooth
 
 SEQ_MOD = 65536
+SAMPLE_INTERVAL_MS = 250  # Send samples at ~4 Hz
 
 bluetooth.start_uart_service()
 
 seq = 0
 
-def on_forever():
+def collect_and_send_data():
     global seq
     # Read sensors
     moisture = pin0.read_analog()                  # 0-1023
@@ -37,7 +38,7 @@ def on_forever():
     seq = (seq + 1) % SEQ_MOD
 
     # Send ~4 Hz
-    sleep(250)
+    sleep(SAMPLE_INTERVAL_MS)
 
 while True:
-    on_forever()
+    collect_and_send_data()
