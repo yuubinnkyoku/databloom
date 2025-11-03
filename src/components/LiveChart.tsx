@@ -18,6 +18,7 @@ import 'chartjs-adapter-date-fns';
 import { Line } from 'react-chartjs-2';
 
 import { applyCalibrationToRaw, useCalibration } from '../lib/calibration';
+import { t } from '../lib/i18n';
 import { useSampleState } from '../lib/store';
 import { getWindowDurationMs, usesMinuteBuckets } from '../lib/timeWindow';
 import { TimeWindow } from '../lib/types';
@@ -99,18 +100,17 @@ type MetricConfig = {
     formatValue?: (value: number) => string;
 };
 
-const METRICS: MetricConfig[] = [
-    { key: 'moisturePercent', label: 'Moisture %', color: COLORS.moisturePercent, formatValue: (v) => `${v.toFixed(1)}%` },
-    { key: 'moistureRaw', label: 'Moisture Raw', color: COLORS.moistureRaw },
-    { key: 'tempC', label: 'Temperature °C', color: COLORS.tempC, formatValue: (v) => `${v.toFixed(1)}°C` },
-    { key: 'lightRaw', label: 'Light Raw', color: COLORS.lightRaw },
-];
-
 type LiveChartProps = {
     timeWindow: TimeWindow;
 };
 
 export function LiveChart({ timeWindow }: LiveChartProps) {
+    const METRICS: MetricConfig[] = useMemo(() => [
+        { key: 'moisturePercent', label: t('moisturePercent'), color: COLORS.moisturePercent, formatValue: (v) => `${v.toFixed(1)}%` },
+        { key: 'moistureRaw', label: t('moistureRaw'), color: COLORS.moistureRaw },
+        { key: 'tempC', label: t('temperatureC'), color: COLORS.tempC, formatValue: (v) => `${v.toFixed(1)}°C` },
+        { key: 'lightRaw', label: t('lightRaw'), color: COLORS.lightRaw },
+    ], []);
     const state = useSampleState();
     const calibration = useCalibration();
     const { rawSamples, minuteBuckets, activeBucket } = state;
@@ -235,7 +235,7 @@ export function LiveChart({ timeWindow }: LiveChartProps) {
                     >
                         <header className="mb-2 flex items-center justify-between text-sm font-medium text-zinc-700 dark:text-zinc-200">
                             <span>{metric.label}</span>
-                            <span className="text-xs text-zinc-500 dark:text-zinc-400">{hasData ? `${points.length} pts` : 'No data'}</span>
+                            <span className="text-xs text-zinc-500 dark:text-zinc-400">{hasData ? `${points.length} ${t('points')}` : t('noData')}</span>
                         </header>
                         <div className="h-[220px]">
                             {hasData ? <Line data={data} options={options} /> : <EmptyState />}
@@ -250,7 +250,7 @@ export function LiveChart({ timeWindow }: LiveChartProps) {
 function EmptyState() {
     return (
         <div className="flex h-full items-center justify-center rounded-md border border-dashed border-zinc-300 text-xs text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-            Awaiting samples…
+            {t('awaitingSamples')}
         </div>
     );
 }

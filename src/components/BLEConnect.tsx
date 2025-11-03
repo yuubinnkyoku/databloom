@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { t } from '../lib/i18n';
 import {
     MicrobitClient,
     getRememberedMicrobitDevices,
@@ -144,22 +145,22 @@ export function BLEConnect() {
 
     const statusLabel = (() => {
         if (!supported) {
-            return 'Web Bluetooth unsupported';
+            return t('statusUnsupported');
         }
         if (state.connection === 'connecting' || autoConnecting) {
-            return 'Connecting…';
+            return t('statusConnecting');
         }
         if (state.connection === 'connected') {
-            return 'Connected';
+            return t('statusConnected');
         }
-        return 'Disconnected';
+        return t('statusDisconnected');
     })();
 
     return (
         <section className="flex flex-col gap-3 rounded-lg border border-zinc-200 bg-white/70 p-4 shadow-sm backdrop-blur dark:border-zinc-700 dark:bg-zinc-900/70">
             <div className="flex items-center justify-between gap-4">
                 <div>
-                    <p className="text-sm font-medium text-zinc-700 dark:text-zinc-200">micro:bit</p>
+                    <p className="text-sm font-medium text-zinc-700 dark:text-zinc-200">{t('microbit')}</p>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400">{statusLabel}</p>
                 </div>
                 <div className="flex gap-2">
@@ -173,7 +174,7 @@ export function BLEConnect() {
                             state.usingSimulator}
                         className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-600 dark:text-zinc-100 dark:hover:bg-zinc-800"
                     >
-                        Connect
+                        {t('connect')}
                     </button>
                     <button
                         type="button"
@@ -181,21 +182,21 @@ export function BLEConnect() {
                         disabled={state.connection !== 'connected'}
                         className="rounded-md border border-transparent bg-zinc-800 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60 dark:bg-zinc-200 dark:text-zinc-900 dark:hover:bg-white"
                     >
-                        Disconnect
+                        {t('disconnect')}
                     </button>
                 </div>
             </div>
             <dl className="grid grid-cols-2 gap-3 text-xs text-zinc-500 dark:text-zinc-400 sm:grid-cols-4">
                 <div>
-                    <dt className="font-medium text-zinc-600 dark:text-zinc-200">Hz</dt>
+                    <dt className="font-medium text-zinc-600 dark:text-zinc-200">{t('hz')}</dt>
                     <dd>{state.hz.toFixed(2)}</dd>
                 </div>
                 <div>
-                    <dt className="font-medium text-zinc-600 dark:text-zinc-200">Drops</dt>
+                    <dt className="font-medium text-zinc-600 dark:text-zinc-200">{t('drops')}</dt>
                     <dd>{state.dropCount}</dd>
                 </div>
                 <div>
-                    <dt className="font-medium text-zinc-600 dark:text-zinc-200">Silence</dt>
+                    <dt className="font-medium text-zinc-600 dark:text-zinc-200">{t('silence')}</dt>
                     <dd>
                         {Number.isFinite(state.silenceMs)
                             ? `${Math.round(state.silenceMs / 1000)}s`
@@ -203,8 +204,8 @@ export function BLEConnect() {
                     </dd>
                 </div>
                 <div>
-                    <dt className="font-medium text-zinc-600 dark:text-zinc-200">Permission</dt>
-                    <dd>{state.permissionGranted ? 'Granted' : 'Pending'}</dd>
+                    <dt className="font-medium text-zinc-600 dark:text-zinc-200">{t('permission')}</dt>
+                    <dd>{state.permissionGranted ? t('granted') : t('pending')}</dd>
                 </div>
             </dl>
             {error ? (
@@ -214,7 +215,7 @@ export function BLEConnect() {
             ) : null}
             {!supported ? (
                 <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
-                    Web Bluetooth requires Chrome on desktop with HTTPS (including localhost via `chrome://flags` ➝ insecure origins treated as secure).
+                    {t('webBluetoothWarning')}
                 </p>
             ) : null}
         </section>

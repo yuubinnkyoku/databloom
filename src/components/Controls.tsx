@@ -9,6 +9,7 @@ import {
     updateCalibration,
     useCalibration,
 } from '../lib/calibration';
+import { t } from '../lib/i18n';
 import { startSimulator } from '../lib/simulator';
 import { sampleStore, useSampleState } from '../lib/store';
 import { getWindowLabel } from '../lib/timeWindow';
@@ -60,25 +61,25 @@ export function Controls({ timeWindow, onTimeWindowChange }: ControlsProps) {
 
     const setDry = () => {
         if (!state.lastSample) {
-            setStatusMessage('No sample received yet.');
+            setStatusMessage(t('noSampleReceived'));
             return;
         }
         updateCalibration({ dry: state.lastSample.moistureRaw });
-        setStatusMessage(`Saved dry reference (${state.lastSample.moistureRaw}).`);
+        setStatusMessage(`${t('savedDryReference')} (${state.lastSample.moistureRaw}).`);
     };
 
     const setWet = () => {
         if (!state.lastSample) {
-            setStatusMessage('No sample received yet.');
+            setStatusMessage(t('noSampleReceived'));
             return;
         }
         updateCalibration({ wet: state.lastSample.moistureRaw });
-        setStatusMessage(`Saved wet reference (${state.lastSample.moistureRaw}).`);
+        setStatusMessage(`${t('savedWetReference')} (${state.lastSample.moistureRaw}).`);
     };
 
     const clearCalibration = () => {
         resetCalibration();
-        setStatusMessage('Calibration cleared.');
+        setStatusMessage(t('calibrationCleared'));
     };
 
     const toggleSimulator = () => {
@@ -95,13 +96,13 @@ export function Controls({ timeWindow, onTimeWindowChange }: ControlsProps) {
         sampleStore.setUsingSimulator(true);
         sampleStore.setConnection('connected');
         simulatorRef.current = startSimulator((payload) => sampleStore.ingest(payload));
-        setStatusMessage('Simulator running (2–5 Hz).');
+        setStatusMessage(t('simulatorRunning'));
     };
 
     return (
         <section className="flex flex-col gap-4 rounded-lg border border-zinc-200 bg-white/70 p-4 shadow-sm backdrop-blur dark:border-zinc-700 dark:bg-zinc-900/70">
             <div className="flex flex-col gap-2">
-                <p className="text-sm font-medium text-zinc-700 dark:text-zinc-100">Time Window</p>
+                <p className="text-sm font-medium text-zinc-700 dark:text-zinc-100">{t('timeWindow')}</p>
                 <div className="flex flex-wrap gap-2">
                     {TIME_WINDOWS.map((window) => {
                         const selected = window === timeWindow;
@@ -125,7 +126,7 @@ export function Controls({ timeWindow, onTimeWindowChange }: ControlsProps) {
             </div>
 
             <div className="flex flex-col gap-2">
-                <p className="text-sm font-medium text-zinc-700 dark:text-zinc-100">Calibration</p>
+                <p className="text-sm font-medium text-zinc-700 dark:text-zinc-100">{t('calibration')}</p>
                 <div className="grid gap-2 sm:grid-cols-3">
                     <button
                         type="button"
@@ -133,7 +134,7 @@ export function Controls({ timeWindow, onTimeWindowChange }: ControlsProps) {
                         className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-600 dark:text-zinc-100 dark:hover:bg-zinc-800"
                         disabled={!state.lastSample}
                     >
-                        Set Dry
+                        {t('setDry')}
                     </button>
                     <button
                         type="button"
@@ -141,38 +142,38 @@ export function Controls({ timeWindow, onTimeWindowChange }: ControlsProps) {
                         className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-600 dark:text-zinc-100 dark:hover:bg-zinc-800"
                         disabled={!state.lastSample}
                     >
-                        Set Wet
+                        {t('setWet')}
                     </button>
                     <button
                         type="button"
                         onClick={clearCalibration}
                         className="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-600 transition hover:bg-red-50 dark:border-red-700 dark:text-red-300 dark:hover:bg-red-950/60"
                     >
-                        Reset
+                        {t('reset')}
                     </button>
                 </div>
                 <dl className="grid grid-cols-2 gap-3 text-xs text-zinc-500 dark:text-zinc-400 sm:grid-cols-4">
                     <div>
-                        <dt className="font-medium text-zinc-600 dark:text-zinc-200">Dry Raw</dt>
+                        <dt className="font-medium text-zinc-600 dark:text-zinc-200">{t('dryRaw')}</dt>
                         <dd>{calibration.dry ?? '—'}</dd>
                     </div>
                     <div>
-                        <dt className="font-medium text-zinc-600 dark:text-zinc-200">Wet Raw</dt>
+                        <dt className="font-medium text-zinc-600 dark:text-zinc-200">{t('wetRaw')}</dt>
                         <dd>{calibration.wet ?? '—'}</dd>
                     </div>
                     <div>
-                        <dt className="font-medium text-zinc-600 dark:text-zinc-200">Calibrated?</dt>
-                        <dd>{calibrated ? 'Yes' : 'No'}</dd>
+                        <dt className="font-medium text-zinc-600 dark:text-zinc-200">{t('calibrated')}</dt>
+                        <dd>{calibrated ? t('yes') : t('no')}</dd>
                     </div>
                     <div>
-                        <dt className="font-medium text-zinc-600 dark:text-zinc-200">Last Moisture %</dt>
+                        <dt className="font-medium text-zinc-600 dark:text-zinc-200">{t('lastMoisturePercent')}</dt>
                         <dd>{latestMoisturePercent !== null ? `${latestMoisturePercent.toFixed(1)}%` : '—'}</dd>
                     </div>
                 </dl>
             </div>
 
             <div className="flex flex-col gap-2">
-                <p className="text-sm font-medium text-zinc-700 dark:text-zinc-100">Tools</p>
+                <p className="text-sm font-medium text-zinc-700 dark:text-zinc-100">{t('tools')}</p>
                 <div className="flex flex-wrap gap-2">
                     <button
                         type="button"
@@ -184,14 +185,14 @@ export function Controls({ timeWindow, onTimeWindowChange }: ControlsProps) {
                                 : 'border-zinc-300 text-zinc-700 hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-100 dark:hover:bg-zinc-800',
                         ].join(' ')}
                     >
-                        {state.usingSimulator ? 'Stop Simulator' : 'Start Simulator'}
+                        {state.usingSimulator ? t('stopSimulator') : t('startSimulator')}
                     </button>
                     <button
                         type="button"
                         onClick={() => sampleStore.resetData()}
                         className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-100 dark:hover:bg-zinc-800"
                     >
-                        Clear Data
+                        {t('clearData')}
                     </button>
                 </div>
             </div>
