@@ -18,7 +18,7 @@ export const translations = {
         permission: '権限',
         granted: '許可済み',
         pending: '保留中',
-        webBluetoothWarning: 'Web Bluetoothはデスクトップ版ChromeでHTTPS接続が必要です（localhostは `chrome://flags` → insecure origins treated as secureで設定可能）。',
+        webBluetoothWarning: 'Web Bluetoothにはデスクトップ版Chromium系ブラウザが必要です。恐らく、あなたのブラウザではサポートされていません',
 
         // Controls
         timeWindow: '時間ウィンドウ',
