@@ -131,3 +131,37 @@ export function t(key: TranslationKey): string {
     const lang = getLanguage();
     return translations[lang][key];
 }
+
+// エラーメッセージの翻訳マッピング
+const errorTranslations: Record<string, { ja: string; en: string }> = {
+    'Web Bluetooth API globally disabled': {
+        ja: 'Web Bluetooth APIがグローバルに無効化されています',
+        en: 'Web Bluetooth API globally disabled'
+    },
+    'Web Bluetooth API is not available in this browser': {
+        ja: 'このブラウザではWeb Bluetooth APIが利用できません',
+        en: 'Web Bluetooth API is not available in this browser'
+    },
+    'User cancelled the requestDevice': {
+        ja: 'ユーザーがデバイス選択をキャンセルしました',
+        en: 'User cancelled the requestDevice'
+    },
+    'Bluetooth adapter not available': {
+        ja: 'Bluetoothアダプターが利用できません',
+        en: 'Bluetooth adapter not available'
+    },
+};
+
+export function translateError(errorMessage: string): string {
+    const lang = getLanguage();
+
+    // 完全一致を試す
+    for (const [key, translations] of Object.entries(errorTranslations)) {
+        if (errorMessage.includes(key)) {
+            return translations[lang];
+        }
+    }
+
+    // 一致しない場合は元のメッセージを返す
+    return errorMessage;
+}

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { t } from '../lib/i18n';
+import { t, translateError } from '../lib/i18n';
 import {
     MicrobitClient,
     getRememberedMicrobitDevices,
@@ -34,7 +34,7 @@ export function BLEConnect() {
             },
             onError: (err) => {
                 const message = err instanceof Error ? err.message : String(err);
-                setError(message);
+                setError(translateError(message));
             },
         });
         clientRef.current = client;
@@ -73,7 +73,7 @@ export function BLEConnect() {
                 await client.connect(devices[0]);
             } catch (err) {
                 const message = err instanceof Error ? err.message : String(err);
-                setError(message);
+                setError(translateError(message));
                 sampleStore.setConnection('disconnected');
             } finally {
                 setAutoConnecting(false);
@@ -110,7 +110,7 @@ export function BLEConnect() {
             })
             .catch((err) => {
                 const message = err instanceof Error ? err.message : String(err);
-                setError(`Auto reconnect failed: ${message}`);
+                setError(`${t('statusConnecting')}: ${translateError(message)}`);
                 sampleStore.setConnection('disconnected');
             });
     }, [state.connection, state.silenceMs, state.usingSimulator]);
@@ -126,7 +126,7 @@ export function BLEConnect() {
             await client.connect();
         } catch (err) {
             const message = err instanceof Error ? err.message : String(err);
-            setError(message);
+            setError(translateError(message));
             sampleStore.setConnection('disconnected');
         }
     };
