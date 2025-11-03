@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Databloom Dashboard",
-  description: "Live soil moisture and environmental telemetry via micro:bit and Web Bluetooth.",
+  description: "micro:bitとWeb Bluetoothで、土壌水分と環境をリアルタイム表示できます。",
 };
 
 export default function RootLayout({
