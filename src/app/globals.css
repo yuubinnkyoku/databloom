@@ -24,3 +24,20 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Code block theming (Shiki) */
+.shiki {
+  /* Soften the light background and provide a proper dark tone */
+  background-color: #f6f8fa !important;
+  /* light */
+  border-radius: 0.5rem;
+  padding: 1rem;
+  overflow-x: auto;
+}
+
+@media (prefers-color-scheme: dark) {
+  .shiki {
+    background-color: #0b0b0d !important;
+    /* dark backdrop */
+  }
+}
