@@ -1,5 +1,11 @@
 # Databloom micro:bit sender (MakeCode Python)
 #
+# IMPORTANT: Before using this code in MakeCode (makecode.microbit.org):
+# 1. Create a new project and switch to Python mode
+# 2. Click "Extensions" in the toolbox
+# 3. Search for and add the "bluetooth" extension
+# 4. Then paste this code into the editor
+#
 # Sends CSV lines over BLE UART (Nordic UART Service):
 #   seq,moistureRaw,tempC,lightRaw\n
 #
