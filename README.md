@@ -50,12 +50,14 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 手順（推奨）:
 
 1. <https://makecode.microbit.org/> を開き、「新しいプロジェクト」→ 言語を Python に切り替え。
-2. `microbit/databloom_microbit.py` の中身をエディタに貼り付けます。
-3. micro:bit をUSB接続して「ダウンロード」で書き込み。
-4. センサーを使う場合は、土壌水分センサのアナログ出力を `P0`、GND/V3.3 に接続。
-5. ブラウザでこのアプリを開き、「micro:bitに接続」ボタンから `BBC micro:bit` を選択してペアリング。
+2. **重要**: ツールボックスの「拡張機能」(Extensions) をクリックし、「bluetooth」を検索して追加。
+3. `microbit/databloom_microbit.py` の中身をエディタに貼り付けます。
+4. micro:bit をUSB接続して「ダウンロード」で書き込み。
+5. センサーを使う場合は、土壌水分センサのアナログ出力を `P0`、GND/V3.3 に接続。
+6. ブラウザでこのアプリを開き、「micro:bitに接続」ボタンから `BBC micro:bit` を選択してペアリング。
 
 注意:
 
+- **Bluetooth拡張機能を追加しないと、コードがエラーになります。**
 - デバイス名は `BBC micro:bit` プレフィックスで検出します。
 - Web Bluetooth 対応ブラウザ（Chrome系）が必要です。iOS Safari は未対応です。

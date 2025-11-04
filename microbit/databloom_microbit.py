@@ -1,5 +1,11 @@
 # Databloom micro:bit sender (MakeCode Python)
 #
+# IMPORTANT: Before using this code in MakeCode (makecode.microbit.org):
+# 1. Create a new project and switch to Python mode
+# 2. Click "Extensions" in the toolbox
+# 3. Search for and add the "bluetooth" extension
+# 4. Then paste this code into the editor
+#
 # Sends CSV lines over BLE UART (Nordic UART Service):
 #   seq,moistureRaw,tempC,lightRaw\n
 #
@@ -24,10 +30,10 @@ def on_forever():
     # Read sensors
     moisture = pins.analog_read_pin(AnalogPin.P0)  # 0-1023
     temp_c = input.temperature()                   # integer °C
-    light = input.light_level()                    # 0-255
+    light_val = input.light_level()                # 0-255
 
     # Compose CSV line: seq,moistureRaw,tempC,lightRaw\n
-    line = "{},{},{},{}".format(seq, moisture, temp_c, light)
+    line = str(seq) + "," + str(moisture) + "," + str(temp_c) + "," + str(light_val)
     bluetooth.uart_write_line(line)
 
     # Increment sequence (wrap at 16-bit)
