@@ -143,6 +143,20 @@ export function BLEConnect() {
         }
     };
 
+    const handleBroadConnect = async () => {
+        setError(null);
+        const client = clientRef.current;
+        if (!client) return;
+        try {
+            sampleStore.setConnection('connecting');
+            await client.connectBroad();
+        } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            setError(translateError(message));
+            sampleStore.setConnection('disconnected');
+        }
+    };
+
     const statusLabel = (() => {
         if (!supported) {
             return t('statusUnsupported');
@@ -175,6 +189,15 @@ export function BLEConnect() {
                         className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-600 dark:text-zinc-100 dark:hover:bg-zinc-800"
                     >
                         {t('connect')}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleBroadConnect}
+                        disabled={!supported || state.connection === 'connecting' || state.connection === 'connected' || state.usingSimulator}
+                        className="rounded-md border border-dashed border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-600 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                        title="見つからない場合は広範囲にスキャンします"
+                    >
+                        {t('broadScan')}
                     </button>
                     <button
                         type="button"

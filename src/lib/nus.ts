@@ -3,6 +3,12 @@
 import { NusPayload } from './types';
 
 export const MICROBIT_NAME_PREFIX = 'BBC micro:bit';
+export const MICROBIT_NAME_PREFIXES = [
+    'BBC micro:bit',
+    'micro:bit',
+    'BBC microbit',
+    'microbit',
+];
 export const NUS_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
 export const NUS_RX_CHARACTERISTIC_UUID = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';
 export const NUS_TX_CHARACTERISTIC_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
@@ -40,24 +46,52 @@ export async function requestMicrobitDevice(): Promise<BluetoothDevice> {
     }
 
     try {
+        // 1) Prefer strict filter: namePrefix + required service (try multiple prefixes)
         return await navigator.bluetooth.requestDevice({
-            filters: [{ namePrefix: MICROBIT_NAME_PREFIX }],
-            optionalServices: [NUS_SERVICE_UUID],
+            filters: MICROBIT_NAME_PREFIXES.map((p) => ({ namePrefix: p, services: [NUS_SERVICE_UUID] })),
         });
     } catch (error) {
         try {
             stripCancelMessage(error);
         } catch (retryable) {
             if (retryable instanceof RetryableRequestError) {
-                return navigator.bluetooth.requestDevice({
-                    acceptAllDevices: true,
-                    optionalServices: [NUS_SERVICE_UUID],
-                });
+                // 2) Fallback: name-only filter + optional service (broader)
+                try {
+                    return await navigator.bluetooth.requestDevice({
+                        filters: MICROBIT_NAME_PREFIXES.map((p) => ({ namePrefix: p })),
+                        optionalServices: [NUS_SERVICE_UUID],
+                    });
+                } catch (e2) {
+                    try {
+                        stripCancelMessage(e2);
+                    } catch (retryable2) {
+                        if (retryable2 instanceof RetryableRequestError) {
+                            // 3) Last resort: accept all devices and filter later
+                            return navigator.bluetooth.requestDevice({
+                                acceptAllDevices: true,
+                                optionalServices: [NUS_SERVICE_UUID],
+                            });
+                        }
+                        throw retryable2;
+                    }
+                    throw e2;
+                }
             }
             throw retryable;
         }
         throw error;
     }
+}
+
+// Broad scan helper: opens chooser with acceptAllDevices and requests NUS later
+export async function requestMicrobitDeviceBroad(): Promise<BluetoothDevice> {
+    if (!isWebBluetoothSupported()) {
+        throw new Error('Web Bluetooth API is not available in this browser.');
+    }
+    return navigator.bluetooth.requestDevice({
+        acceptAllDevices: true,
+        optionalServices: [NUS_SERVICE_UUID],
+    });
 }
 
 export async function getRememberedMicrobitDevices(): Promise<BluetoothDevice[]> {
@@ -68,7 +102,10 @@ export async function getRememberedMicrobitDevices(): Promise<BluetoothDevice[]>
         return [];
     }
     const devices = await navigator.bluetooth.getDevices();
-    return devices.filter((device) => device.name?.startsWith(MICROBIT_NAME_PREFIX));
+    return devices.filter((device) => {
+        const name = device.name ?? '';
+        return MICROBIT_NAME_PREFIXES.some((p) => name.startsWith(p));
+    });
 }
 
 export interface MicrobitClientOptions {
@@ -107,11 +144,7 @@ export class MicrobitClient {
             throw new Error('Web Bluetooth API is not available in this browser.');
         }
 
-        if (requestedDevice) {
-            this.device = requestedDevice;
-        } else {
-            this.device = await requestMicrobitDevice();
-        }
+        this.device = requestedDevice ?? (await requestMicrobitDevice());
 
         if (!this.device.gatt) {
             throw new Error('No GATT server available on the selected device.');
@@ -119,19 +152,48 @@ export class MicrobitClient {
 
         try {
             this.server = await this.device.gatt.connect();
+
+            // NUSサービス取得
             const service = await this.server.getPrimaryService(NUS_SERVICE_UUID);
-            this.txCharacteristic = await service.getCharacteristic(NUS_TX_CHARACTERISTIC_UUID);
-            await this.txCharacteristic.startNotifications();
+
+            // 通知が使える特性を自動選択
+            const picked = await pickNotifyCharacteristic(service);
+            if (!picked.characteristic) {
+                const detail = picked.tried.map((t) => `${t.uuid}:${t.notify ? 'notify' : '-'}`).join(', ');
+                throw new Error(`No NUS characteristic with notifications. Tried: ${detail}`);
+            }
+
+            this.txCharacteristic = picked.characteristic;
+
+            // 通知開始（環境で未対応なら明示エラーへ差し替え）
+            try {
+                await this.txCharacteristic.startNotifications();
+            } catch (e) {
+                if (e instanceof DOMException && e.name === 'NotSupportedError') {
+                    throw new Error('GATT Error: Not supported (TX notify unavailable or requires pairing).');
+                }
+                throw e;
+            }
+
             this.txCharacteristic.addEventListener('characteristicvaluechanged', this.handleValueChanged);
             this.device.addEventListener('gattserverdisconnected', this.handleDisconnected);
-            if (this.options.onConnected) {
-                this.options.onConnected(this.device);
-            }
+            this.options.onConnected?.(this.device);
         } catch (error) {
             this.options.onError?.(error);
             this.cleanup();
             throw error;
         }
+    }
+
+    // Connect using broad scan flow (acceptAllDevices). Useful when strict filters find nothing.
+    async connectBroad() {
+        const device = await requestMicrobitDeviceBroad();
+        const name = device.name ?? '';
+        const isMicrobit = MICROBIT_NAME_PREFIXES.some((p) => name.startsWith(p));
+        if (!isMicrobit) {
+            throw new Error(`Selected device is not a micro:bit: "${name || 'Unnamed'}"`);
+        }
+        return this.connect(device);
     }
 
     async reconnect() {
@@ -211,4 +273,39 @@ export class MicrobitClient {
         this.txCharacteristic = null;
         this.buffer = '';
     }
+}
+
+// 追加: NUS内でnotify可能な特性を選ぶユーティリティ
+async function pickNotifyCharacteristic(
+    service: BluetoothRemoteGATTService
+): Promise<{ characteristic: BluetoothRemoteGATTCharacteristic | null; tried: Array<{ uuid: string; notify: boolean }> }> {
+    const tried: Array<{ uuid: string; notify: boolean }> = [];
+
+    // まず既定のTX → 念のためRXも確認（環境によって入れ替わりを踏む保険）
+    const candidates = [NUS_TX_CHARACTERISTIC_UUID, NUS_RX_CHARACTERISTIC_UUID];
+    for (const uuid of candidates) {
+        try {
+            const c = await service.getCharacteristic(uuid);
+            const canNotify = !!c.properties?.notify;
+            tried.push({ uuid: c.uuid, notify: canNotify });
+            if (canNotify) return { characteristic: c, tried };
+        } catch {
+            // 無視して次へ
+        }
+    }
+
+    // 全特性走査して notify 可能なものを拾う（実装差異の保険）
+    try {
+        const all = await service.getCharacteristics();
+        for (const c of all) {
+            const canNotify = !!c.properties?.notify;
+            tried.push({ uuid: c.uuid, notify: canNotify });
+        }
+        const withNotify = all.find((c) => c.properties?.notify);
+        if (withNotify) return { characteristic: withNotify, tried };
+    } catch {
+        // getCharacteristics未対応環境の可能性 → そのまま継続
+    }
+
+    return { characteristic: null, tried };
 }

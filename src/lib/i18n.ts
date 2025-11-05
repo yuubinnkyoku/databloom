@@ -12,6 +12,7 @@ export const translations = {
         statusDisconnected: '未接続',
         connect: '接続',
         disconnect: '切断',
+        broadScan: '広範囲スキャン',
         hz: 'Hz',
         drops: 'ドロップ',
         silence: '無音',
@@ -64,6 +65,7 @@ export const translations = {
         statusDisconnected: 'Disconnected',
         connect: 'Connect',
         disconnect: 'Disconnect',
+        broadScan: 'Broad Scan',
         hz: 'Hz',
         drops: 'Drops',
         silence: 'Silence',
@@ -149,6 +151,18 @@ const errorTranslations: Record<string, { ja: string; en: string }> = {
     'Bluetooth adapter not available': {
         ja: 'Bluetoothアダプターが利用できません',
         en: 'Bluetooth adapter not available'
+    },
+    'GATT Error: Not supported': {
+        ja: 'GATTエラー: 通知が未対応です。OSのペアリングを削除し、MakeCodeで「No pairing required」を有効化して再書き込み後、Webから接続してください。',
+        en: 'GATT error: notifications not supported. Remove OS pairing and rebuild with "No pairing required", then connect from the web.'
+    },
+    'No NUS characteristic with notifications': {
+        ja: 'NUS内に通知可能な特性が見つかりません。micro:bitのファーム設定（UART/NUS・ペアリング不要）を確認してください。',
+        en: 'No notifiable characteristic found in NUS. Verify firmware (UART/NUS enabled, no-pairing).'
+    },
+    'Selected device is not a micro:bit': {
+        ja: '選択したデバイスはmicro:bitではありません。リストから「BBC micro:bit …」を選んでください。',
+        en: 'Selected device is not a micro:bit. Please choose "BBC micro:bit …".'
     },
 };
 
