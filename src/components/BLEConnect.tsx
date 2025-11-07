@@ -19,7 +19,11 @@ export function BLEConnect() {
     const clientRef = useRef<MicrobitClient | null>(null);
     const reconnectRef = useRef<number>(0);
     const autoAttemptRef = useRef(false);
-    const supported = useMemo(() => isWebBluetoothSupported(), []);
+    const [supported, setSupported] = useState(false);
+
+    useEffect(() => {
+        setSupported(isWebBluetoothSupported());
+    }, []);
 
     useEffect(() => {
         const client = new MicrobitClient({

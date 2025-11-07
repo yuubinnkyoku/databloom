@@ -13,6 +13,29 @@ export const NUS_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
 export const NUS_RX_CHARACTERISTIC_UUID = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';
 export const NUS_TX_CHARACTERISTIC_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
 
+// micro:bit UART (MakeCode bluetooth.start_uart_service())
+export const MICROBIT_UART_SERVICE_UUID = 'e95d0000-251d-470a-a062-fa1922dfa9a8';
+export const MICROBIT_UART_RX_CHARACTERISTIC_UUID = 'e95d0001-251d-470a-a062-fa1922dfa9a8'; // write
+export const MICROBIT_UART_TX_CHARACTERISTIC_UUID = 'e95d0002-251d-470a-a062-fa1922dfa9a8'; // notify
+
+// サービス候補をプロファイル化（NUS と micro:bit UART の両対応）
+const UART_PROFILES: Array<{
+    name: string;
+    service: string;
+    candidates: string[]; // 通知可能な特性（TX のみ。RX は書き込み専用なので除外）
+}> = [
+        {
+            name: 'Nordic NUS',
+            service: NUS_SERVICE_UUID,
+            candidates: [NUS_TX_CHARACTERISTIC_UUID], // RX を削除
+        },
+        {
+            name: 'micro:bit UART',
+            service: MICROBIT_UART_SERVICE_UUID,
+            candidates: [MICROBIT_UART_TX_CHARACTERISTIC_UUID], // RX を削除
+        },
+    ];
+
 const decoder = new TextDecoder();
 
 export function isWebBluetoothSupported(): boolean {
@@ -46,9 +69,15 @@ export async function requestMicrobitDevice(): Promise<BluetoothDevice> {
     }
 
     try {
-        // 1) Prefer strict filter: namePrefix + required service (try multiple prefixes)
+        // 1) Prefer strict filter: namePrefix + any known UART service
+        const filters: Array<{ services?: BluetoothServiceUUID[]; namePrefix?: string }> = [];
+        for (const p of MICROBIT_NAME_PREFIXES) {
+            for (const prof of UART_PROFILES) {
+                filters.push({ namePrefix: p, services: [prof.service] });
+            }
+        }
         return await navigator.bluetooth.requestDevice({
-            filters: MICROBIT_NAME_PREFIXES.map((p) => ({ namePrefix: p, services: [NUS_SERVICE_UUID] })),
+            filters,
         });
     } catch (error) {
         try {
@@ -59,7 +88,7 @@ export async function requestMicrobitDevice(): Promise<BluetoothDevice> {
                 try {
                     return await navigator.bluetooth.requestDevice({
                         filters: MICROBIT_NAME_PREFIXES.map((p) => ({ namePrefix: p })),
-                        optionalServices: [NUS_SERVICE_UUID],
+                        optionalServices: UART_PROFILES.map((u) => u.service),
                     });
                 } catch (e2) {
                     try {
@@ -69,7 +98,7 @@ export async function requestMicrobitDevice(): Promise<BluetoothDevice> {
                             // 3) Last resort: accept all devices and filter later
                             return navigator.bluetooth.requestDevice({
                                 acceptAllDevices: true,
-                                optionalServices: [NUS_SERVICE_UUID],
+                                optionalServices: UART_PROFILES.map((u) => u.service),
                             });
                         }
                         throw retryable2;
@@ -90,7 +119,7 @@ export async function requestMicrobitDeviceBroad(): Promise<BluetoothDevice> {
     }
     return navigator.bluetooth.requestDevice({
         acceptAllDevices: true,
-        optionalServices: [NUS_SERVICE_UUID],
+        optionalServices: UART_PROFILES.map((u) => u.service),
     });
 }
 
@@ -153,21 +182,37 @@ export class MicrobitClient {
         try {
             this.server = await this.device.gatt.connect();
 
-            // NUSサービス取得
-            const service = await this.server.getPrimaryService(NUS_SERVICE_UUID);
+            // 任意のUARTサービスを順に試す
+            let foundService: BluetoothRemoteGATTService | null = null;
+            let triedDetails: Array<{ uuid: string; notify: boolean; service: string }> = [];
 
-            // 通知が使える特性を自動選択
-            const picked = await pickNotifyCharacteristic(service);
-            if (!picked.characteristic) {
-                const detail = picked.tried.map((t) => `${t.uuid}:${t.notify ? 'notify' : '-'}`).join(', ');
-                throw new Error(`No NUS characteristic with notifications. Tried: ${detail}`);
+            for (const profile of UART_PROFILES) {
+                try {
+                    const svc = await this.server.getPrimaryService(profile.service);
+                    const picked = await pickNotifyCharacteristic(svc, profile.candidates);
+                    triedDetails = triedDetails.concat(
+                        picked.tried.map((t) => ({ ...t, service: profile.service }))
+                    );
+                    if (picked.characteristic) {
+                        foundService = svc;
+                        this.txCharacteristic = picked.characteristic;
+                        console.info('[nus] Using service', profile.name, profile.service, 'characteristic', this.txCharacteristic.uuid);
+                        break;
+                    }
+                } catch {
+                    // 次のプロファイルへ
+                }
             }
 
-            this.txCharacteristic = picked.characteristic;
+            if (!this.txCharacteristic || !foundService) {
+                const detail = triedDetails.map((t) => `${t.service}/${t.uuid}:${t.notify ? 'notify' : '-'}`).join(', ');
+                throw new Error(`No UART/NUS characteristic with notifications. Tried: ${detail}`);
+            }
 
             // 通知開始（環境で未対応なら明示エラーへ差し替え）
             try {
                 await this.txCharacteristic.startNotifications();
+                console.info('[nus] Notifications started on', this.txCharacteristic.uuid);
             } catch (e) {
                 if (e instanceof DOMException && e.name === 'NotSupportedError') {
                     throw new Error('GATT Error: Not supported (TX notify unavailable or requires pairing).');
@@ -228,6 +273,15 @@ export class MicrobitClient {
             const line = this.buffer.slice(0, newline).replace(/\r$/, '').trim();
             this.buffer = this.buffer.slice(newline + 1);
             if (line.length > 0) {
+                // 軽い診断ログ（最初の数行のみ）
+                const w = window as unknown as { __nus_seen__?: number };
+                if (w.__nus_seen__ === undefined) w.__nus_seen__ = 0;
+                if ((w.__nus_seen__ ?? 0) < 5) {
+                    w.__nus_seen__ = (w.__nus_seen__ ?? 0) + 1;
+                    console.info('[nus] line', w.__nus_seen__, line);
+                }
+            }
+            if (line.length > 0) {
                 const payload = this.parseLine(line);
                 if (payload) {
                     this.options.onSample(payload);
@@ -277,16 +331,17 @@ export class MicrobitClient {
 
 // 追加: NUS内でnotify可能な特性を選ぶユーティリティ
 async function pickNotifyCharacteristic(
-    service: BluetoothRemoteGATTService
+    service: BluetoothRemoteGATTService,
+    candidates?: string[]
 ): Promise<{ characteristic: BluetoothRemoteGATTCharacteristic | null; tried: Array<{ uuid: string; notify: boolean }> }> {
     const tried: Array<{ uuid: string; notify: boolean }> = [];
 
-    // まず既定のTX → 念のためRXも確認（環境によって入れ替わりを踏む保険）
-    const candidates = [NUS_TX_CHARACTERISTIC_UUID, NUS_RX_CHARACTERISTIC_UUID];
-    for (const uuid of candidates) {
+    // 候補UUIDを優先的に確認（未指定ならNUS TX のみ）
+    const uuids = candidates ?? [NUS_TX_CHARACTERISTIC_UUID];
+    for (const uuid of uuids) {
         try {
             const c = await service.getCharacteristic(uuid);
-            const canNotify = !!c.properties?.notify;
+            const canNotify = !!(c.properties?.notify || c.properties?.indicate);
             tried.push({ uuid: c.uuid, notify: canNotify });
             if (canNotify) return { characteristic: c, tried };
         } catch {
@@ -294,17 +349,44 @@ async function pickNotifyCharacteristic(
         }
     }
 
-    // 全特性走査して notify 可能なものを拾う（実装差異の保険）
+    // 全特性走査して notify/indicate 可能なものを拾う（実装差異の保険）
     try {
         const all = await service.getCharacteristics();
         for (const c of all) {
-            const canNotify = !!c.properties?.notify;
+            const canNotify = !!(c.properties?.notify || c.properties?.indicate);
             tried.push({ uuid: c.uuid, notify: canNotify });
         }
-        const withNotify = all.find((c) => c.properties?.notify);
+        // 候補が指定されている場合は、候補順でnotify/indicate可の特性を優先
+        if (candidates && candidates.length > 0) {
+            for (const pref of candidates) {
+                const match = all.find((c) => c.uuid.toLowerCase() === pref.toLowerCase() && (c.properties?.notify || c.properties?.indicate));
+                if (match) return { characteristic: match, tried };
+            }
+        }
+        const withNotify = all.find((c) => c.properties?.notify || c.properties?.indicate);
         if (withNotify) return { characteristic: withNotify, tried };
     } catch {
         // getCharacteristics未対応環境の可能性 → そのまま継続
+    }
+
+    // プロパティにnotify/indicateが付かない環境への最後の保険として、
+    // TX候補（通知専用）に対して startNotifications を試みる
+    // RX（書き込み専用）は通知不可なので candidates から除外済み
+    for (const uuid of uuids) {
+        try {
+            const c = await service.getCharacteristic(uuid);
+            try {
+                await c.startNotifications();
+                // 成功したら停止して返す（呼び出し側で再度開始する）
+                await c.stopNotifications().catch(() => undefined);
+                tried.push({ uuid: c.uuid, notify: true });
+                return { characteristic: c, tried };
+            } catch {
+                tried.push({ uuid: c.uuid, notify: false });
+            }
+        } catch {
+            // 無視
+        }
     }
 
     return { characteristic: null, tried };

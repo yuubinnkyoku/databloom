@@ -160,6 +160,10 @@ const errorTranslations: Record<string, { ja: string; en: string }> = {
         ja: 'NUS内に通知可能な特性が見つかりません。micro:bitのファーム設定（UART/NUS・ペアリング不要）を確認してください。',
         en: 'No notifiable characteristic found in NUS. Verify firmware (UART/NUS enabled, no-pairing).'
     },
+    'No UART/NUS characteristic with notifications': {
+        ja: 'UART/NUS内に通知可能な特性が見つかりません。micro:bitのファーム設定（UARTまたはNUS・ペアリング不要）を確認してください。',
+        en: 'No notifiable characteristic found in UART/NUS. Verify firmware (UART or NUS enabled, no-pairing).'
+    },
     'Selected device is not a micro:bit': {
         ja: '選択したデバイスはmicro:bitではありません。リストから「BBC micro:bit …」を選んでください。',
         en: 'Selected device is not a micro:bit. Please choose "BBC micro:bit …".'
