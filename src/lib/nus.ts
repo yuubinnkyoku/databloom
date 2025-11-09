@@ -19,6 +19,7 @@ export const MICROBIT_UART_RX_CHARACTERISTIC_UUID = 'e95d0001-251d-470a-a062-fa1
 export const MICROBIT_UART_TX_CHARACTERISTIC_UUID = 'e95d0002-251d-470a-a062-fa1922dfa9a8'; // notify
 
 // サービス候補をプロファイル化（NUS と micro:bit UART の両対応）
+// IMPORTANT: RX特性は書き込み専用で通知不可のため、candidates には含めない
 const UART_PROFILES: Array<{
     name: string;
     service: string;
@@ -27,7 +28,7 @@ const UART_PROFILES: Array<{
         {
             name: 'Nordic NUS',
             service: NUS_SERVICE_UUID,
-            candidates: [NUS_TX_CHARACTERISTIC_UUID], // RX を削除
+            candidates: [NUS_TX_CHARACTERISTIC_UUID], // TX (6e400003) のみ使用
         },
         {
             name: 'micro:bit UART',
@@ -338,14 +339,19 @@ async function pickNotifyCharacteristic(
 
     // 候補UUIDを優先的に確認（未指定ならNUS TX のみ）
     const uuids = candidates ?? [NUS_TX_CHARACTERISTIC_UUID];
+    console.info('[nus] pickNotifyCharacteristic: candidates=', candidates, 'uuids=', uuids);
     for (const uuid of uuids) {
         try {
             const c = await service.getCharacteristic(uuid);
             const canNotify = !!(c.properties?.notify || c.properties?.indicate);
             tried.push({ uuid: c.uuid, notify: canNotify });
-            if (canNotify) return { characteristic: c, tried };
-        } catch {
-            // 無視して次へ
+            console.info(`[nus] Characteristic ${c.uuid}: properties=`, c.properties, `canNotify=${canNotify}`);
+            if (canNotify) {
+                console.info('[nus] Using characteristic from primary loop:', c.uuid);
+                return { characteristic: c, tried };
+            }
+        } catch (e) {
+            console.warn(`[nus] Failed to get characteristic ${uuid}:`, e);
         }
     }
 
@@ -356,15 +362,25 @@ async function pickNotifyCharacteristic(
             const canNotify = !!(c.properties?.notify || c.properties?.indicate);
             tried.push({ uuid: c.uuid, notify: canNotify });
         }
-        // 候補が指定されている場合は、候補順でnotify/indicate可の特性を優先
+        // 候補が指定されている場合は、候補順でnotify/indicate可の特性のみ使用
         if (candidates && candidates.length > 0) {
             for (const pref of candidates) {
                 const match = all.find((c) => c.uuid.toLowerCase() === pref.toLowerCase() && (c.properties?.notify || c.properties?.indicate));
-                if (match) return { characteristic: match, tried };
+                if (match) {
+                    console.info('[nus] Found from all characteristics (candidate match):', match.uuid);
+                    return { characteristic: match, tried };
+                }
+            }
+            // 候補リストに含まれない特性は使用しない（RX特性の誤検出を防ぐ）
+            console.warn('[nus] No candidate matched in all characteristics. Will try startNotifications fallback.');
+        } else {
+            // 候補未指定の場合のみ、任意の notify 可能な特性を使用
+            const withNotify = all.find((c) => c.properties?.notify || c.properties?.indicate);
+            if (withNotify) {
+                console.info('[nus] Found from all characteristics (any notify):', withNotify.uuid);
+                return { characteristic: withNotify, tried };
             }
         }
-        const withNotify = all.find((c) => c.properties?.notify || c.properties?.indicate);
-        if (withNotify) return { characteristic: withNotify, tried };
     } catch {
         // getCharacteristics未対応環境の可能性 → そのまま継続
     }
@@ -372,6 +388,7 @@ async function pickNotifyCharacteristic(
     // プロパティにnotify/indicateが付かない環境への最後の保険として、
     // TX候補（通知専用）に対して startNotifications を試みる
     // RX（書き込み専用）は通知不可なので candidates から除外済み
+    console.info('[nus] Trying startNotifications fallback for uuids:', uuids);
     for (const uuid of uuids) {
         try {
             const c = await service.getCharacteristic(uuid);
@@ -380,12 +397,14 @@ async function pickNotifyCharacteristic(
                 // 成功したら停止して返す（呼び出し側で再度開始する）
                 await c.stopNotifications().catch(() => undefined);
                 tried.push({ uuid: c.uuid, notify: true });
+                console.info('[nus] startNotifications succeeded on:', c.uuid);
                 return { characteristic: c, tried };
-            } catch {
+            } catch (e) {
                 tried.push({ uuid: c.uuid, notify: false });
+                console.error('[nus] startNotifications failed on:', c.uuid, 'error:', e);
             }
-        } catch {
-            // 無視
+        } catch (e) {
+            console.error('[nus] Failed to get characteristic in fallback:', uuid, 'error:', e);
         }
     }
 
